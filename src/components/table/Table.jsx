@@ -43,6 +43,9 @@ import { dateTimeConverter } from "../../utils/dateTimeConverter";
 import xlsx from "xlsx";
 import getAllUsers from "../../services/users";
 import OrderPreviews from "../Order/OrderPreviews";
+import AddIcon from "@material-ui/icons/Add";
+import RemoveIcon from "@material-ui/icons/Remove";
+import { dispense, updateMedicine } from "../../services/inventory";
 const useStyles = makeStyles(() => ({
 	table: {
 		minWidth: 650
@@ -98,6 +101,10 @@ const useStyles = makeStyles(() => ({
 		minWidth: 220,
 		maxWidth: 220,
 		marginLeft: 10
+	},
+	amountField: {
+		marginLeft: 10,
+		width: 150
 	}
 }));
 
@@ -122,10 +129,11 @@ const TableWrapper = ({
 	const [loading, setLoading] = useState(false);
 	const [loadingCsv, setLoadingCsv] = useState(false);
 	const [data, setData] = useState([]);
+	const [amount, setAmount] = useState(0);
 	const [options, setOptions] = useState([]);
 	const [startDate, setStartdate] = useState(sd);
 	const [endDate, setEndDate] = useState(ed);
-	const [askDays, setAskDays] = useState(false);
+	const [askQuantity, setAskQuantity] = useState(false);
 	const [showConfirmDialogToDelete, setShowConfirmDialogToDelete] =
 		useState(false);
 	const [selectedRow, setSelectedRow] = useState();
@@ -140,6 +148,7 @@ const TableWrapper = ({
 	const [returned, setReturned] = useState(0);
 	const [returnedReceived, setReturnedReceived] = useState(0);
 	const [dispatched, setDispatched] = useState(0);
+	const [isSending, setIsSending] = useState(false);
 	const [csvData, setCsvData] = useState({
 		data: [],
 		headers: headers,
@@ -177,25 +186,24 @@ const TableWrapper = ({
 		setLineItemIds(list);
 	};
 
-	const askDaysFromVendor = (omsStatus) => {
-		if (omsStatus == "Delayed") {
-			return (
-				<TextDialog
-					title="Confirmation Dialog"
-					message="How many days this product will be delay?"
-					state={askDays}
-					stateHandler={setAskDays}
-					submitHandler={async (newValue) => {
-						let value = "Delayed " + newValue + " Days";
-						let omsStatusVal = "Delayed";
-						let days = newValue;
-						setOmsStatus(value);
-						updateOmsStatuses(omsStatus, omsStatusVal, days);
-					}}
-					showField={true}
-				/>
-			);
-		}
+	const askQuantityToUpdate = () => {
+		return (
+			<TextDialog
+				title="Confirmation Dialog"
+				message="By how much quantity this product will be updated?"
+				state={askQuantity}
+				stateHandler={setAskQuantity}
+				submitHandler={async (newValue) => {
+					let quantity = newValue;
+					console.log(data[lineItemIds[0]]);
+					const updatedRecord = await updateMedicine({
+						id: lineItemIds[0],
+						quantity
+					});
+				}}
+				showField={true}
+			/>
+		);
 	};
 	useEffect(() => {
 		async function fetchOrdersCount() {
@@ -245,7 +253,7 @@ const TableWrapper = ({
 		}
 
 		fetchData();
-	}, [paginator, filters, getData, startDate, endDate]);
+	}, [paginator, filters, getData, startDate, endDate, isSending]);
 
 	useEffect(() => {
 		async function fetchData() {
@@ -385,14 +393,29 @@ const TableWrapper = ({
 		}
 	};
 
-	const setPreviewNumber = async () => {
+	const onAddInventory = async () => {
 		try {
-			const resp = await updatePreviewNumber({
-				previewNumber: preview,
-				idsForPreviews
-			});
-		} catch (e) {}
+			const updatedRecord = await dispense({ id: lineItemIds, amount });
+			setIsSending(true);
+		} catch (e) {
+		} finally {
+			setIsSending(false);
+		}
 	};
+
+	const onSubtractInventory = async () => {
+		try {
+			const updatedRecord = await dispense({
+				id: lineItemIds,
+				amount: -1 * amount
+			});
+			setIsSending(true);
+		} catch (e) {
+		} finally {
+			setIsSending(false);
+		}
+	};
+
 	return (
 		<Paper elevation={3}>
 			{omsOptionsWithColours &&
@@ -481,7 +504,7 @@ const TableWrapper = ({
 						}}
 					/>
 
-					{checkRole(localStorage.getItem("role")) ? (
+					{/* {checkRole(localStorage.getItem("role")) ? (
 						<Button
 							color="primary"
 							className={classes.button}
@@ -495,7 +518,35 @@ const TableWrapper = ({
 						</Button>
 					) : (
 						""
-					)}
+					)} */}
+					<TextField
+						className={classes.amountField}
+						name="quantity"
+						label="Dispense Amount"
+						onChange={(e) => setAmount(e.target.value)}
+						min="0"
+						required
+					/>
+					<IconButton
+						color="primary"
+						className={classes.button}
+						variant="outlined"
+						onClick={() => {
+							onAddInventory();
+						}}
+					>
+						<AddIcon />
+					</IconButton>
+					<IconButton
+						color="primary"
+						className={classes.button}
+						variant="contained"
+						onClick={() => {
+							onSubtractInventory();
+						}}
+					>
+						<RemoveIcon />
+					</IconButton>
 					<Button
 						color="primary"
 						loading={loadingCsv}
@@ -506,6 +557,16 @@ const TableWrapper = ({
 					>
 						{loadingCsv && <CircularProgress size={18} />}
 						{loadingCsv ? "Sending Report..." : "Send Report"}
+					</Button>
+					<Button
+						color="primary"
+						className={classes.button}
+						variant="outlined"
+						onClick={() => {
+							setAskQuantity(true);
+						}}
+					>
+						Update Quantity
 					</Button>
 
 					<Typography className={classes.typo} variant="h6">
@@ -531,7 +592,7 @@ const TableWrapper = ({
 				submitHandler={async (newValue) => {
 					setOmsStatus(newValue);
 					if (newValue == "Delayed") {
-						setAskDays(true);
+						setAskQuantity(true);
 						return;
 					}
 					if (newValue == "Cancel") {
@@ -551,7 +612,7 @@ const TableWrapper = ({
 				}}
 				showField={false}
 			/>
-			{askDaysFromVendor(omsStatus)}
+			{askQuantity ? askQuantityToUpdate() : ""}
 			<TableContainer>
 				<PerfectScrollbar>
 					<Table className={classes.table}>

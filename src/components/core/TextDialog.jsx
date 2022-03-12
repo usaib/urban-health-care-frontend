@@ -53,7 +53,7 @@ const TextDialog = ({
 				{showField && (
 					<TextField
 						onChange={handleChange}
-						label="Days"
+						label="Quantity"
 						type="number"
 						min="0"
 					/>

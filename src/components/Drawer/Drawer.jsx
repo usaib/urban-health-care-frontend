@@ -3,7 +3,7 @@ import makeStyles from "./styles";
 import clsx from "clsx";
 import { Drawer, List } from "@material-ui/core";
 import DrawerList from "./DrawerList";
-import Cart from "./carts.png";
+import Cart from "./medicine.png";
 import User from "./man.png";
 import Vendor from "./provision.png";
 
