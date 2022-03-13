@@ -61,7 +61,24 @@ const FilterPopover = ({
 			}
 		}
 	}, [initialFilter]);
-
+	useEffect(() => {
+		async function fetchData() {
+			let params;
+			try {
+				const result = await getOptionsData({
+					limit: 1000000,
+					offset: 0
+				});
+				console.log(result);
+				setOptionsData(result.data);
+			} catch (error) {
+				console.log(error);
+				setOptionsData([]);
+			} finally {
+			}
+		}
+		fetchData();
+	}, []);
 	const handleChange = (event) => {
 		setSelectedData(event.target.value);
 	};

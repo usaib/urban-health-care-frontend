@@ -46,6 +46,7 @@ import OrderPreviews from "../Order/OrderPreviews";
 import AddIcon from "@material-ui/icons/Add";
 import RemoveIcon from "@material-ui/icons/Remove";
 import { dispense, updateMedicine } from "../../services/inventory";
+import { RadioButtonUnchecked } from "@material-ui/icons";
 const useStyles = makeStyles(() => ({
 	table: {
 		minWidth: 650
@@ -118,7 +119,8 @@ const TableWrapper = ({
 	omsOptions,
 	omsOptionsWithColours,
 	getOrdersCount,
-	onDetails
+	onDetails,
+	getNames
 }) => {
 	const today = new Date();
 	let componentRef = useRef();
@@ -196,10 +198,16 @@ const TableWrapper = ({
 				submitHandler={async (newValue) => {
 					let quantity = newValue;
 					console.log(data[lineItemIds[0]]);
-					const updatedRecord = await updateMedicine({
-						id: lineItemIds[0],
-						quantity
-					});
+					try {
+						const updatedRecord = await updateMedicine({
+							id: lineItemIds[0],
+							quantity
+						});
+						setIsSending(true);
+					} catch (e) {
+					} finally {
+						setIsSending(false);
+					}
 				}}
 				showField={true}
 			/>
@@ -324,59 +332,27 @@ const TableWrapper = ({
 	const showToast = () => {
 		setToast({
 			state: "open",
-			message: "Please select Vendor to get preview for ready to pickups",
+			message: "Please select Medicine Name to get Stock Report",
 			type: "error",
 			hideDuration: 3000
 		});
 	};
-
-	async function updateOmsStatuses(prevStatus, omsStatusVal, days) {
-		if (lineItemIds.length == 0) {
-			setToast({
-				state: "open",
-				message: "Please select product to change status",
-				type: "error",
-				hideDuration: 3000
-			});
-			return;
-		}
-		setLoading(true);
-		const token = localStorage.getItem("token", 0);
-		const email = localStorage.getItem("email");
-		try {
-			const result = await updateOmsStatus({
-				lineItemIds,
-				omsStatusVal,
-				days,
-				omsStatusUpdatedOn: new Date().toISOString(),
-				omsStatusUpdatedBy: email,
-				token
-			});
-		} catch (error) {
-		} finally {
-			setFilters({});
-			setLineItemIds([]);
-		}
-	}
-	async function emailOnStatusChange(prevStatus, omsStatusVal, days) {
-		const to = "saadfarooq@bagallery.com,ahsan.lodhi@gmail.com";
-		let sku = [];
-		data.forEach((data) => {
-			if (lineItemIds.includes(data.id.toString())) {
-				sku.push(data.sku);
-			}
+	const showToastForDispense = () => {
+		setToast({
+			state: "open",
+			message: "Please select Medicine to Dispense",
+			type: "error",
+			hideDuration: 3000
 		});
-		try {
-			const result = await sendEmail({
-				sku,
-				lineItemIds,
-				from: localStorage.getItem("email"),
-				to,
-				previousStatus: prevStatus,
-				currentStatus: omsStatusVal
-			});
-		} catch (error) {}
-	}
+	};
+	const showToastForError = (msg) => {
+		setToast({
+			state: "open",
+			message: msg,
+			type: "error",
+			hideDuration: 3000
+		});
+	};
 
 	const checkRole = (role) => {
 		if (role == "purchase") {
@@ -394,62 +370,42 @@ const TableWrapper = ({
 	};
 
 	const onAddInventory = async () => {
-		try {
-			const updatedRecord = await dispense({ id: lineItemIds, amount });
-			setIsSending(true);
-		} catch (e) {
-		} finally {
-			setIsSending(false);
+		if (!lineItemIds.length) {
+			showToastForDispense();
+			return;
+		} else {
+			try {
+				const updatedRecord = await dispense({ id: lineItemIds, amount });
+				setIsSending(true);
+			} catch (e) {
+			} finally {
+				setIsSending(false);
+			}
 		}
 	};
 
 	const onSubtractInventory = async () => {
-		try {
-			const updatedRecord = await dispense({
-				id: lineItemIds,
-				amount: -1 * amount
-			});
-			setIsSending(true);
-		} catch (e) {
-		} finally {
-			setIsSending(false);
+		if (!lineItemIds.length) {
+			showToastForDispense();
+			return;
+		} else {
+			try {
+				const updatedRecord = await dispense({
+					id: lineItemIds,
+					amount: -1 * amount
+				});
+				setIsSending(true);
+			} catch (e) {
+				console.log("this is Error", e);
+				showToastForError("Please Increase Quantity of this Stock");
+			} finally {
+				setIsSending(false);
+			}
 		}
 	};
 
 	return (
 		<Paper elevation={3}>
-			{omsOptionsWithColours &&
-				omsOptionsWithColours.map((option) => {
-					return (
-						<Button
-							style={{
-								color: option.color,
-								margin: 5
-							}}
-							variant="filled"
-							color="primary"
-							onClick={() => {
-								setInitialFilter([`${option.key}`]);
-								setFilters({ omsStatus: [`${option.key}`] });
-							}}
-						>
-							{option.key}{" "}
-							<Chip
-								key={eval(option.value)}
-								label={eval(option.value)}
-								style={{
-									margin: "0.3rem",
-									backgroundColor: option.color,
-									color: "white"
-								}}
-								color={option.color}
-								size="small"
-								variant="outlined"
-							/>
-						</Button>
-					);
-				})}
-
 			<Toast {...toast} setState={setToast} />
 			<Grid container justify="space-between" alignItems="center">
 				<Grid item>
@@ -479,32 +435,32 @@ const TableWrapper = ({
 					/>
 				</Grid>
 			</Grid>
-			{dateFilters ? (
-				<form noValidate>
-					<TextField
-						id="startDate"
-						label="Start Date"
-						type="datetime-local"
-						defaultValue={sd}
-						className={classes.date}
-						onChange={(e) => setStartdate(e.target.value)}
-						InputLabelProps={{
-							shrink: true
-						}}
-					/>
-					<TextField
-						id="endDate"
-						label="End Date"
-						type="datetime-local"
-						defaultValue={ed}
-						className={classes.date}
-						onChange={(e) => setEndDate(e.target.value)}
-						InputLabelProps={{
-							shrink: true
-						}}
-					/>
 
-					{/* {checkRole(localStorage.getItem("role")) ? (
+			<form noValidate>
+				<TextField
+					id="startDate"
+					label="Start Date"
+					type="datetime-local"
+					defaultValue={sd}
+					className={classes.date}
+					onChange={(e) => setStartdate(e.target.value)}
+					InputLabelProps={{
+						shrink: true
+					}}
+				/>
+				<TextField
+					id="endDate"
+					label="End Date"
+					type="datetime-local"
+					defaultValue={ed}
+					className={classes.date}
+					onChange={(e) => setEndDate(e.target.value)}
+					InputLabelProps={{
+						shrink: true
+					}}
+				/>
+
+				{/* {checkRole(localStorage.getItem("role")) ? (
 						<Button
 							color="primary"
 							className={classes.button}
@@ -519,88 +475,98 @@ const TableWrapper = ({
 					) : (
 						""
 					)} */}
-					<TextField
-						className={classes.amountField}
-						name="quantity"
-						label="Dispense Amount"
-						onChange={(e) => setAmount(e.target.value)}
-						min="0"
-						required
-					/>
-					<IconButton
-						color="primary"
-						className={classes.button}
-						variant="outlined"
-						onClick={() => {
-							onAddInventory();
-						}}
-					>
-						<AddIcon />
-					</IconButton>
-					<IconButton
-						color="primary"
-						className={classes.button}
-						variant="contained"
-						onClick={() => {
-							onSubtractInventory();
-						}}
-					>
-						<RemoveIcon />
-					</IconButton>
-					<Button
-						color="primary"
-						loading={loadingCsv}
-						className={classes.button}
-						variant="outlined"
-						onClick={fetchAllRecords}
-						disabled={loadingCsv}
-					>
-						{loadingCsv && <CircularProgress size={18} />}
-						{loadingCsv ? "Sending Report..." : "Send Report"}
-					</Button>
-					<Button
-						color="primary"
-						className={classes.button}
-						variant="outlined"
-						onClick={() => {
-							setAskQuantity(true);
-						}}
-					>
-						Update Quantity
-					</Button>
-
-					<Typography className={classes.typo} variant="h6">
-						Total Orders:{""}
-						<Chip
-							key={count}
-							label={count}
-							style={{ margin: "0.1rem" }}
-							color="primary"
-							size="small"
+				{dateFilters ? (
+					<>
+						<TextField
+							className={classes.amountField}
+							name="quantity"
+							label="Dispense Amount"
+							onChange={(e) => setAmount(e.target.value)}
+							min="0"
+							required
 						/>
-					</Typography>
-				</form>
-			) : (
-				""
-			)}
-			<Dialog
-				title="Confirmation Dialog"
-				message="Are you sure you want to change status?"
-				state={showConfirmDialog}
-				stateHandler={setShowConfirmDialog}
-				options={omsOptions}
-				submitHandler={async (newValue) => {
-					setOmsStatus(newValue);
-					if (newValue == "Delayed") {
-						setAskQuantity(true);
-						return;
-					}
-					if (newValue == "Cancel") {
-						emailOnStatusChange(omsStatus, newValue);
-					}
-					updateOmsStatuses(omsStatus, newValue);
-				}}
-			/>
+						{/* <IconButton
+							color="primary"
+							className={classes.button}
+							variant="outlined"
+							onClick={() => {
+								onAddInventory();
+							}}
+						>
+							<AddIcon />
+						</IconButton> */}
+						<IconButton
+							color="primary"
+							className={classes.button}
+							variant="contained"
+							onClick={() => {
+								onSubtractInventory();
+							}}
+						>
+							<RemoveIcon />
+						</IconButton>
+						<Button
+							color="primary"
+							loading={loadingCsv}
+							className={classes.button}
+							variant="outlined"
+							onClick={fetchAllRecords}
+							disabled={loadingCsv}
+						>
+							{loadingCsv && <CircularProgress size={18} />}
+							{loadingCsv ? "Sending Report..." : "Send Report"}
+						</Button>
+						<Button
+							color="primary"
+							className={classes.button}
+							variant="outlined"
+							onClick={() => {
+								setAskQuantity(true);
+							}}
+						>
+							Update Quantity
+						</Button>
+
+						<Typography className={classes.typo} variant="h6">
+							Total Orders:{""}
+							<Chip
+								key={count}
+								label={count}
+								style={{ margin: "0.1rem" }}
+								color="primary"
+								size="small"
+							/>
+						</Typography>
+					</>
+				) : (
+					<ReactToPrint content={() => componentRef}>
+						<PrintContextConsumer>
+							{({ handlePrint }) => (
+								<Button
+									color="primary"
+									loading={loadingCsv}
+									className={classes.button}
+									variant="outlined"
+									disabled={loadingCsv}
+									onClick={() => {
+										if (!filters.name) {
+											showToast();
+											return;
+										} else {
+											//setPreviewNumber();
+											handlePrint();
+										}
+									}}
+								>
+									{loadingCsv && <CircularProgress size={18} />}
+									{"Get PDF"}
+								</Button>
+							)}
+						</PrintContextConsumer>
+					</ReactToPrint>
+				)}
+			</form>
+
 			<TextDialog
 				title="Confirmation Dialog"
 				message="Are you sure you want to delete?"
@@ -615,7 +581,7 @@ const TableWrapper = ({
 			{askQuantity ? askQuantityToUpdate() : ""}
 			<TableContainer>
 				<PerfectScrollbar>
-					<Table className={classes.table}>
+					<Table className={classes.table} ref={(el) => (componentRef = el)}>
 						<TableHead className={classes.tableHeader}>
 							<TableRow>
 								{dateFilters ? (
@@ -642,7 +608,7 @@ const TableWrapper = ({
 											filterHandler={setFilters}
 											className={classes.tableCell}
 											filterType={header.filterType}
-											getOptionsData={getOptionsData}
+											getOptionsData={getNames}
 											initialFilter={initialFilter}
 											omsOptions={omsOptions}
 										>
@@ -728,33 +694,46 @@ const TableWrapper = ({
 													</TableCell>
 												);
 											})}
-											<TableCell className={classes.tableCell}>
-												<Box display="flex" flexDirection="row">
-													{
-														<IconButton
-															color="primary"
-															variant="contained"
-															size="medium"
-															onClick={() => onEdit(data[index])}
-														>
-															<EditIcon />
-														</IconButton>
-													}
-													{
-														<IconButton
-															color="primary"
-															variant="contained"
-															size="medium"
-															onClick={() => {
-																setShowConfirmDialogToDelete(true);
-																setSelectedRow(data[index]);
-															}}
-														>
-															<DeleteIcon />
-														</IconButton>
-													}
-												</Box>
-											</TableCell>
+											{
+												<TableCell className={classes.tableCell}>
+													<Box display="flex" flexDirection="row">
+														{dateFilters ? (
+															<IconButton
+																color="primary"
+																variant="contained"
+																size="medium"
+																onClick={() => onEdit(data[index])}
+															>
+																<EditIcon />
+															</IconButton>
+														) : (
+															""
+														)}
+														{dateFilters ? (
+															<IconButton
+																color="primary"
+																variant="contained"
+																size="medium"
+																onClick={() => {
+																	setShowConfirmDialogToDelete(true);
+																	setSelectedRow(data[index]);
+																}}
+															>
+																<DeleteIcon />
+															</IconButton>
+														) : (
+															<IconButton
+																color="primary"
+																variant="contained"
+																size="medium"
+																onClick={() => {}}
+															>
+																<RadioButtonUnchecked />
+															</IconButton>
+														)}
+													</Box>
+												</TableCell>
+											}
 										</TableRow>
 										{!loading &&
 											(!!data.length || (
@@ -780,23 +759,6 @@ const TableWrapper = ({
 					paginator={paginator}
 					paginatorHandler={setPaginator}
 				/>
-			) : (
-				""
-			)}
-			{checkRoleForPreview(localStorage.getItem("role")) ? (
-				<div style={{ display: "none" }}>
-					<div ref={(el) => (componentRef = el)}>
-						<OrderPreviews
-							startDate={startDate}
-							endDate={endDate}
-							vendor={filters.vendor ? filters.vendor[0] : "null"}
-							showToast={showToast}
-							setIds={setIdsForPreviews}
-							previewHandler={setPreview}
-							preview={preview}
-						/>
-					</div>
-				</div>
 			) : (
 				""
 			)}

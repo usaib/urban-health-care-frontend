@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { Drawer, List } from "@material-ui/core";
 import DrawerList from "./DrawerList";
 import Cart from "./medicine.png";
-import User from "./man.png";
+import Stock from "./stock.png";
 import Vendor from "./provision.png";
 
 const vendorList = [
@@ -12,6 +12,11 @@ const vendorList = [
 		href: "/app/dashboard/orders",
 		icon: Cart,
 		title: "Orders"
+	},
+	{
+		href: "/app/dashboard/stockHistory",
+		icon: Stock,
+		title: "Stock History"
 	}
 ];
 const adminList = [
@@ -19,6 +24,11 @@ const adminList = [
 		href: "/app/dashboard/orders",
 		icon: Cart,
 		title: "Medicines"
+	},
+	{
+		href: "/app/dashboard/stockHistory",
+		icon: Stock,
+		title: "Stock History"
 	}
 ];
 function DrawerWrapper({ open }) {

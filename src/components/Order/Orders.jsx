@@ -27,7 +27,7 @@ const headers = [
 		filterKey: "id",
 		filterType: "text"
 	},
-	{ label: "Name", value: "name" },
+	{ label: "Name", value: "name", filterKey: "name", filterType: "select" },
 	{ label: "Type", value: "type" },
 	{ label: "Quantity", value: "quantity" },
 	{ label: "Company", value: "company" },
@@ -116,9 +116,22 @@ function Orders() {
 	const getOmsOptionsColours = (role) => {
 		return [{ key: "Dispense Out", value: "pending", color: "#0381d1" }];
 	};
+	const getNames = async (params) => {
+		const resp = await getInventory(params);
+		const inventory = resp.data.data.data.rows;
+		const transfromedData = inventory.map((data) => {
+			return data.name;
+		});
+		console.log("td", transfromedData);
+
+		return {
+			data: transfromedData
+		};
+	};
 	const tableProps = {
 		headers: getHeaders(authContext.role),
 		getData: fetchInventory,
+		getNames,
 		dateFilters: true,
 		omsOptions: getOmsOptions(authContext.role),
 		omsOptionsWithColours: getOmsOptionsColours(authContext.role),

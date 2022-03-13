@@ -126,7 +126,7 @@ function Login() {
 	return (
 		<>
 			<Helmet>
-				<title>Login | Order Manager</title>
+				<title>Login | Urban Hospital</title>
 			</Helmet>
 			<Box className={classes.root}>
 				<Grid container>
@@ -156,7 +156,7 @@ function Login() {
 									Welcome to
 								</Typography>
 								<Typography component="h1" variant="h4" margin={0.5}>
-									Bagallery Sales Dashboard
+									Urban Hospital Pharmacy
 								</Typography>
 								<Typography variant="subtitle2">
 									Login into your account
