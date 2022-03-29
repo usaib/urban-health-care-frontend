@@ -505,17 +505,25 @@ const TableWrapper = ({
 						>
 							<RemoveIcon />
 						</IconButton>
-						<Button
-							color="primary"
-							loading={loadingCsv}
-							className={classes.button}
-							variant="outlined"
-							onClick={fetchAllRecords}
-							disabled={loadingCsv}
-						>
-							{loadingCsv && <CircularProgress size={18} />}
-							{loadingCsv ? "Sending Report..." : "Send Report"}
-						</Button>
+						<ReactToPrint content={() => componentRef}>
+							<PrintContextConsumer>
+								{({ handlePrint }) => (
+									<Button
+										color="primary"
+										loading={loadingCsv}
+										className={classes.button}
+										variant="outlined"
+										disabled={loadingCsv}
+										onClick={() => {
+											handlePrint();
+										}}
+									>
+										{loadingCsv && <CircularProgress size={18} />}
+										{"Get PDF"}
+									</Button>
+								)}
+							</PrintContextConsumer>
+						</ReactToPrint>
 						<Button
 							color="primary"
 							className={classes.button}

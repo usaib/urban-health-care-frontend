@@ -19,17 +19,11 @@ export function AuthContextProvider(props) {
 	const [userRole, setUserRole] = useState(role);
 
 	const loginHandler = (token, user) => {
-		
 		localStorage.setItem("token", token);
 		setIsLoggedIn(1);
 		localStorage.setItem("isLoggedIn", 1);
 		localStorage.setItem("email", user.email);
 		localStorage.setItem("role", user.role);
-
-		if (user.vendors[0]) {
-			localStorage.setItem("vendor", user.vendors[0]["name"]);
-			localStorage.setItem("tot", user.vendors[0]["tot"]);
-		}
 		setUserRole(user.role);
 		setToken(token);
 		setUserEmail(user.email);
@@ -39,7 +33,7 @@ export function AuthContextProvider(props) {
 		setIsLoggedIn(0);
 		setUserEmail("");
 		setUserRole("");
-		
+
 		localStorage.setItem("token", null);
 		localStorage.setItem("isLoggedIn", 0);
 		localStorage.removeItem("email");
@@ -47,7 +41,7 @@ export function AuthContextProvider(props) {
 		localStorage.removeItem("vendor");
 		localStorage.removeItem("tot");
 	};
-	
+
 	const contextValue = {
 		token: token,
 		isLoggedIn: isLoggedIn,
